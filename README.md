@@ -361,6 +361,10 @@ sudo systemctl restart jenkins
 ```
 ![Screenshot Capture - 2024-03-07 - 16-41-07](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/8ef586bf-bb6d-40cb-b56f-b87ac4b826ce)
 
+![Screenshot Capture - 2024-03-07 - 16-39-54](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/ca508ff9-62c5-43e3-98e9-4cb1bbd9f51f)
+
+
+
 **Phase 4: Monitoring**
 
 1. **Install Prometheus and Grafana:**
@@ -526,14 +530,12 @@ sudo systemctl restart jenkins
 
    To configure Prometheus to scrape metrics from Node Exporter and Jenkins, you need to modify the `prometheus.yml` file. Here is an example `prometheus.yml` configuration for your setup:
 
-   ```yaml
-  # my global config
+   ```
+ 
 global:
   scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
 
-# Alertmanager configuration
 alerting:
   alertmanagers:
     - static_configs:
@@ -569,7 +571,9 @@ Checks:
    Check the validity of the configuration file:
 
    ```bash
+
    promtool check config /etc/prometheus/prometheus.yml
+
    ```
 
    Reload the Prometheus configuration without restarting:
