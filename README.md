@@ -1,42 +1,63 @@
-<div align="center">
-  <img src="./public/assets/DevSecOps.png" alt="Logo" width="100%" height="100%">
-
-  <br>
-  <a href="http://netflix-clone-with-tmdb-using-react-mui.vercel.app/">
-    <img src="./public/assets/netflix-logo.png" alt="Logo" width="100" height="32">
-  </a>
-</div>
-
-<br />
-
-<div align="center">
-  <img src="./public/assets/home-page.png" alt="Logo" width="100%" height="100%">
-  <p align="center">Home Page</p>
-</div>
-
-# **Youtube Video for step by step Demonstration!**
-[![Video Tutorial](https://img.youtube.com/vi/g8X5AoqCJHc/0.jpg)](https://youtu.be/g8X5AoqCJHc)
 
 
-## Susbcribe:
-[https://www.youtube.com/@cloudchamp?
-](https://www.youtube.com/@cloudchamp?sub_confirmation=1)
+![1704437006427](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/9e7f841c-432d-4660-a67c-bebbeb867f4c)
 
-# Deploy Netflix Clone on Cloud using Jenkins - DevSecOps Project!
+
+![Screenshot Capture - 2024-03-07 - 19-30-04](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/f150a0f9-9521-441e-8d2b-198e2be30811)
+
+
+# Deploy Netflix Clone on Cloud using Jenkins 
+
+**Important Notes:**
+
+1.8080-Jenkins
+2.8081 0r 8082 to host the website
+3.9000-Sonarqube
+4.9090-Prometheus
+5.3000-Grafana
+6.9100-Nodeexporter
+
+Trouble Shooting Tips:
+1. Some commands here are not with sudo so check for this
+2. Prometheus yml file is indentation sensitive so check for that
+3. Some services will not be up in prometheus so while troubleshooting in the places of localhost some works in local host or public ip
+4. You cannot deploy multiple images pushing in the same container so make sure you create a repo in docker before pushing or change port number while hosting check the listening port
+   ```
+   sudo apt install net-tools
+   sudo netstat -tuln | grep 8081
+   ```
+5.For services in prometheus to be up and healthy check the following 
+
+**Verify IP Address**: If Prometheus is running on a different machine than Jenkins, ensure that the IP address used in the Prometheus configuration is correct and accessible from the Prometheus server. Instead of using localhost, you might need to use the actual IP address of the Jenkins server.
+
+**Test Connection Manually**: You can try to manually curl or use a web browser to access the Jenkins /prometheus endpoint from the Prometheus server to see if you can establish a connection. For example:
+```
+curl http://<jenkins_ip>:8080/prometheus
+```
+6.To set up email in email notifications go to your google account -> manage your google account -> Security -> Search for app password -> Generate a password for jenkins
+For setting up email we wont be giving our actual password instead we will be giving the app password.
+7.It seems like there are a couple of issues with your Prometheus configuration file:
+**Indentation Issue:** The node_exporter job configuration is not properly indented under scrape_configs. It should be aligned with the - job_name: "prometheus" entry.
+Missing indentation after the static_configs section under the node_exporter job configuration.
+Make sure to correct the indentation and syntax as per the corrected version provided above, and then try running promtool check config /etc/prometheus/prometheus.yml again.
+
 
 ### **Phase 1: Initial Setup and Deployment**
 
 **Step 1: Launch EC2 (Ubuntu 22.04):**
 
 - Provision an EC2 instance on AWS with Ubuntu 22.04.
-- Connect to the instance using SSH.
+- Connect to the instance using SSH Or Putty
+
+![Screenshot Capture - 2024-03-07 - 18-39-45](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/27fe1dfc-9a3a-407a-a51e-36f2cae3c235)
+
 
 **Step 2: Clone the Code:**
 
 - Update all the packages and then clone the code.
 - Clone your application's code repository onto the EC2 instance:
     
-    ```bash
+    ```
     git clone https://github.com/N4si/DevSecOps-Project.git
     ```
     
@@ -45,7 +66,7 @@
 
 - Set up Docker on the EC2 instance:
     
-    ```bash
+    ```
     
     sudo apt-get update
     sudo apt-get install docker.io -y
@@ -56,15 +77,15 @@
     
 - Build and run your application using Docker containers:
     
-    ```bash
+    ```
     docker build -t netflix .
     docker run -d --name netflix -p 8081:80 netflix:latest
     
-    #to delete
+    **#to delete container and image**
     docker stop <containerid>
     docker rmi -f netflix
     ```
-
+This is to create and run a image locally without API key so it would show a blank page with no content
 It will show an error cause you need API key
 
 **Step 4: Get the API Key:**
@@ -80,6 +101,7 @@ It will show an error cause you need API key
 Now recreate the Docker image with your api key:
 ```
 docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
+docker run -d -p 8081:80 netflix:latest
 ```
 
 **Phase 2: Security**
@@ -106,7 +128,7 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
         sudo apt-get install trivy        
         ```
         
-        to scan image using trivy
+       ** to scan image using trivy**
         ```
         trivy image <imageid>
         ```
@@ -120,7 +142,8 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
 
 1. **Install Jenkins for Automation:**
     - Install Jenkins on the EC2 instance to automate deployment:
-    Install Java
+      
+    **Install Java**
     
     ```bash
     sudo apt update
@@ -164,6 +187,15 @@ Install below plugins
 
 Goto Manage Jenkins → Tools → Install JDK(17) and NodeJs(16)→ Click on Apply and Save
 
+**Look into the versions for each dependency**
+
+jdk17->17.0.9+9
+sonar-scanner->sonarcube scanner 5.0.1.3006
+node16- >Nodejs 16.5.0 
+DP-Check ->dependency-check 9.0.8
+sonar-server->server url ->Sonar-token
+
+
 
 ### SonarQube
 
@@ -181,57 +213,7 @@ Click on Apply and Save
 
 We will install a sonar scanner in the tools.
 
-Create a Jenkins webhook
-
-1. **Configure CI/CD Pipeline in Jenkins:**
-- Create a CI/CD pipeline in Jenkins to automate your application deployment.
-
-```groovy
-pipeline {
-    agent any
-    tools {
-        jdk 'jdk17'
-        nodejs 'node16'
-    }
-    environment {
-        SCANNER_HOME = tool 'sonar-scanner'
-    }
-    stages {
-        stage('clean workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-        stage('Checkout from Git') {
-            steps {
-                git branch: 'main', url: 'https://github.com/N4si/DevSecOps-Project.git'
-            }
-        }
-        stage("Sonarqube Analysis") {
-            steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
-                    -Dsonar.projectKey=Netflix'''
-                }
-            }
-        }
-        stage("quality gate") {
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
-                }
-            }
-        }
-        stage('Install Dependencies') {
-            steps {
-                sh "npm install"
-            }
-        }
-    }
-}
-```
-
-Certainly, here are the instructions without step numbers:
+Create a Jenkins webhook in sonarqube 
 
 **Install Dependency-Check and Docker Tools in Jenkins**
 
@@ -275,92 +257,109 @@ Certainly, here are the instructions without step numbers:
 
 Now, you have installed the Dependency-Check plugin, configured the tool, and added Docker-related plugins along with your DockerHub credentials in Jenkins. You can now proceed with configuring your Jenkins pipeline to include these tools and credentials in your CI/CD process.
 
+
+
 ```groovy
 
-pipeline{
+pipeline {
     agent any
-    tools{
+    
+    tools {
         jdk 'jdk17'
         nodejs 'node16'
     }
+    
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar-scanner'
     }
+    
     stages {
-        stage('clean workspace'){
-            steps{
+        stage('clean workspace') {
+            steps {
                 cleanWs()
             }
         }
-        stage('Checkout from Git'){
-            steps{
+        
+        stage('Checkout from Git') {
+            steps {
                 git branch: 'main', url: 'https://github.com/N4si/DevSecOps-Project.git'
             }
         }
-        stage("Sonarqube Analysis "){
-            steps{
+        
+        stage("Sonarqube Analysis") {
+            steps {
                 withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
-                    -Dsonar.projectKey=Netflix '''
+                    sh """$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
+                        -Dsonar.projectKey=Netflix"""
                 }
             }
         }
-        stage("quality gate"){
-           steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
-                }
-            } 
-        }
+        
         stage('Install Dependencies') {
             steps {
                 sh "npm install"
             }
         }
+        
         stage('OWASP FS SCAN') {
             steps {
                 dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
+        
         stage('TRIVY FS SCAN') {
             steps {
                 sh "trivy fs . > trivyfs.txt"
             }
         }
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker build --build-arg TMDB_V3_API_KEY=<yourapikey> -t netflix ."
-                       sh "docker tag netflix nasi101/netflix:latest "
-                       sh "docker push nasi101/netflix:latest "
+        
+        stage("quality gate") {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                }
+            } 
+        }
+        
+        stage("Docker Build & Push") {
+            steps {
+                script {
+                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                       sh "docker build --build-arg TMDB_V3_API_KEY=4e31f5891d7b9de7686ad36831e0c56d -t netflix01 ."
+                       sh "docker tag netflix keer2405/netflix01:latest "
+                       sh "docker push keer2405/netflix01:latest "
                     }
                 }
             }
         }
-        stage("TRIVY"){
-            steps{
-                sh "trivy image nasi101/netflix:latest > trivyimage.txt" 
+        
+        stage("TRIVY") {
+            steps {
+                sh "trivy image keer2405/netflix01:latest > trivyimage.txt" 
             }
         }
-        stage('Deploy to container'){
-            steps{
-                sh 'docker run -d --name netflix -p 8081:80 nasi101/netflix:latest'
+        
+        stage('Deploy to container') {
+            steps {
+                sh 'docker run -d --name netflix -p 8081:80 keer2405/netflix01:latest'
             }
         }
     }
 }
 
+```
 
-If you get docker login failed errorr
 
+**If you get docker login failed errorr**
+
+```
 sudo su
 sudo usermod -aG docker jenkins
 sudo systemctl restart jenkins
 
-
 ```
+![Screenshot Capture - 2024-03-07 - 16-41-07](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/8ef586bf-bb6d-40cb-b56f-b87ac4b826ce)
 
 **Phase 4: Monitoring**
 
@@ -528,19 +527,42 @@ sudo systemctl restart jenkins
    To configure Prometheus to scrape metrics from Node Exporter and Jenkins, you need to modify the `prometheus.yml` file. Here is an example `prometheus.yml` configuration for your setup:
 
    ```yaml
-   global:
-     scrape_interval: 15s
+  # my global config
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
 
-   scrape_configs:
-     - job_name: 'node_exporter'
-       static_configs:
-         - targets: ['localhost:9100']
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
 
-     - job_name: 'jenkins'
-       metrics_path: '/prometheus'
-       static_configs:
-         - targets: ['<your-jenkins-ip>:<your-jenkins-port>']
-   ```
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http' .
+
+    static_configs:
+      - targets: ["localhost:9090"]
+      
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+```
+
+Checks:
 
    Make sure to replace `<your-jenkins-ip>` and `<your-jenkins-port>` with the appropriate values for your Jenkins setup.
 
@@ -673,8 +695,15 @@ Grafana is a powerful tool for creating visualizations and dashboards, and you c
 
 That's it! You've successfully installed and set up Grafana to work with Prometheus for monitoring and visualization.
 
+![Screenshot Capture - 2024-03-07 - 16-43-19](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/7f69b85a-7b54-4240-b114-40d2acc6f38e)
+
+
+
 2. **Configure Prometheus Plugin Integration:**
     - Integrate Jenkins with Prometheus to monitor the CI/CD pipeline.
+      
+  ![Screenshot Capture - 2024-03-07 - 16-42-19](https://github.com/keedevops/DevSecOpsCICD-Projects/assets/155215036/cfd1d170-310e-4ad1-b12c-2c3a5ab5f9a0)
+
 
 
 **Phase 5: Notification**
